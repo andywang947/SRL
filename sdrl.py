@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 dataset = 'Rain100L'
 parser.add_argument("--rainy_data_path", type=str, default="./dataset/"+dataset+"/", help='Path to rainy data')
 parser.add_argument("--sdr_data_path", type=str, default="./dataset/"+dataset+"/sdr/", help='Path to sdr data')
-parser.add_argument("--result_path", type=str, default="./result/", help='Path to save result')
+parser.add_argument("--result_path", type=str, default="./dataset/"+dataset+"/result_reparameter_one_layer_20250423/", help='Path to save result')
 parser.add_argument("--backbone", type=str, default="Unet", help= "select backbone to be used in SDRL")
 parser.add_argument("--epoch", type=int, default=100)
 opt = parser.parse_args()
@@ -29,10 +29,6 @@ data_path = opt.rainy_data_path
 save_path = opt.result_path
 sdr_path = opt.sdr_data_path
 epochs = opt.epoch
-
-print(data_path, save_path, sdr_path)
-print(os.path.exists(data_path))
-# exit()
 
 loss_function = MSELoss()
 data_loader = train_dataloader(data_path, batch_size=1)
@@ -53,7 +49,9 @@ for batch in data_loader:
         epoch_timer.tic()    
         
         if opt.backbone == "Unet":
-            model = UNet()
+            model = UNet(is_target=True)
+            aux_model = UNet(input_channels=1)
+
         elif opt.backbone == "ResNet":
             model = ResNet()
         elif opt.backbone == "DnCNN":
@@ -64,19 +62,36 @@ for batch in data_loader:
         model = model.to(device)
         optimizer = Adam(model.parameters(), lr=0.001)
 
+        aux_model = aux_model.to(device)
+        aux_optimizer = Adam(aux_model.parameters(), lr=0.001)
+
         inner_batch_size = 1
         rainy_images = rainy_images.to(device)
         clean_images = clean_images.to(device)
+
         model.train()
+        aux_model.train()
+
         SDR_loader = SDR_dataloader(os.path.join(sdr_path, name[0][:-4]), batch_size=inner_batch_size)
         
 
         for j in tqdm(range(epochs)):
             for k, inner_batch in enumerate(SDR_loader):
-                sdr_images = inner_batch
+                sdr_images, input_edge_map, sdr_edge_map = inner_batch
+
                 sdr_images = sdr_images.to(device)
+                input_edge_map = input_edge_map.to(device)
+                sdr_edge_map = sdr_edge_map.to(device)
+
                 images = torch.cat([rainy_images for _ in range(len(sdr_images))],0)
-                net_output = model(images)
+
+                aux_net_output = aux_model(input_edge_map)
+                aux_loss = loss_function(aux_net_output, sdr_edge_map)
+                aux_optimizer.zero_grad()
+                aux_loss.backward()
+                aux_optimizer.step()
+
+                net_output = model(images, aux_model=aux_model)
                 loss = loss_function(net_output, sdr_images)
                 optimizer.zero_grad()
                 loss.backward()
