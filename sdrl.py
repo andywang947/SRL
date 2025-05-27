@@ -14,6 +14,8 @@ from network import UNet, ResNet, DnCNN
 from restormer import Restormer
 from data import SDR_dataloader, train_dataloader
 
+import torch.nn.functional as F
+
 
 torch.manual_seed(3)
 parser = argparse.ArgumentParser()
@@ -50,6 +52,23 @@ for batch in data_loader:
     try:
         # train 
         rainy_images, clean_images, name = batch
+
+        h,w = rainy_images.shape[2], rainy_images.shape[3]
+        factor = 16
+
+        H,W = ((h+factor)//factor)*factor, ((w+factor)//factor)*factor
+        padh = H-h if h%factor!=0 else 0
+        padw = W-w if w%factor!=0 else 0
+        rainy_images = F.pad(rainy_images, (0,padw,0,padh), 'reflect')
+
+        img_save_path = os.path.join(save_path,name[0])
+        print(img_save_path)
+        if os.path.exists(img_save_path) == True :
+            print("the image exists!")
+            continue
+        else :
+            print("The image now is :", name[0])
+
         epoch_timer.tic()    
         
         if opt.backbone == "Unet":
@@ -74,6 +93,8 @@ for batch in data_loader:
         for j in tqdm(range(epochs)):
             for k, inner_batch in enumerate(SDR_loader):
                 sdr_images = inner_batch
+                sdr_images = F.pad(sdr_images, (0,padw,0,padh), 'reflect')
+
                 sdr_images = sdr_images.to(device)
                 images = torch.cat([rainy_images for _ in range(len(sdr_images))],0)
                 net_output = model(images)
@@ -89,6 +110,8 @@ for batch in data_loader:
         time = epoch_timer.toc()
         print("Time: ", time)
         total_time += time
+        net_output = net_output[:,:,:h,:w]
+
         denoised = np.clip(net_output[0].permute(1,2,0).detach().cpu().numpy(), 0, 1)
         plt.imsave(os.path.join(save_path,name[0]), denoised)
     
