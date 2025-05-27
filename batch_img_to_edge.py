@@ -1,6 +1,6 @@
 import subprocess
 
-datasets = ["Rain100L","Rain12", "Rain800", "DDN-SIRR-syn", "DDN-SIRR-real", "GT-rain"]
+datasets = ["Rain100L","Rain12", "Rain800", "DDN_SIRR_syn", "DDN_SIRR_real", "GT-rain"]
 
 for dataset in datasets:
     print(f"🚀 開始處理：{dataset}")

@@ -13,10 +13,12 @@ def apply_sobel_edge_map(input_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
     for filename in os.listdir(input_dir):
-        # 處理 .png 檔案
         if filename.lower().endswith(('.png', 'jpg')):
             input_path = os.path.join(input_dir, filename)
-            output_path = os.path.join(output_dir, filename)
+
+            basename = os.path.splitext(filename)[0]
+            output_filename = basename + '.png' # 強迫輸出 png file
+            output_path = os.path.join(output_dir, output_filename)
 
             if os.path.exists(output_path):
                 print(f"🟡 已存在，跳過：{output_path}")

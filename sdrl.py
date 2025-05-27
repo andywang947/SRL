@@ -19,13 +19,17 @@ import torch.nn.functional as F
 
 torch.manual_seed(3)
 parser = argparse.ArgumentParser()
-dataset = 'Rain100L'
-parser.add_argument("--rainy_data_path", type=str, default="./dataset/"+dataset+"/", help='Path to rainy data')
-parser.add_argument("--sdr_data_path", type=str, default="./dataset/"+dataset+"/sdr/", help='Path to sdr data')
-parser.add_argument("--result_path", type=str, default="./dataset/"+dataset+"/result_reparameter_one_layer_20250423/", help='Path to save result')
-parser.add_argument("--backbone", type=str, default="Unet", help= "select backbone to be used in SDRL")
+
+parser.add_argument("--dataset", type=str, default="DDN_SIRR_real", help="Dataset name")
+parser.add_argument("--result_name", type=str, default="result_reparameter_one_layer_20250527", help="Dataset name")
 parser.add_argument("--epoch", type=int, default=100)
+parser.add_argument("--backbone", type=str, default="Unet", help= "select backbone to be used in SDRL")
+
 opt = parser.parse_args()
+
+opt.rainy_data_path = f"./dataset/{opt.dataset}/"
+opt.sdr_data_path = f"./dataset/{opt.dataset}/sdr/"
+opt.result_path = f"./dataset/{opt.dataset}/result_{opt.result_name}/"
 
 data_path = opt.rainy_data_path
 save_path = opt.result_path
@@ -95,9 +99,15 @@ for batch in data_loader:
         
 
         for j in tqdm(range(epochs)):
+            model.train()
+
             for k, inner_batch in enumerate(SDR_loader):
                 sdr_images, input_edge_map, sdr_edge_map = inner_batch
+
                 sdr_images = F.pad(sdr_images, (0,padw,0,padh), 'reflect')
+                input_edge_map = F.pad(input_edge_map, (0,padw,0,padh), 'reflect')
+                sdr_edge_map = F.pad(sdr_edge_map, (0,padw,0,padh), 'reflect')
+
                 sdr_images = sdr_images.to(device)
                 input_edge_map = input_edge_map.to(device)
                 sdr_edge_map = sdr_edge_map.to(device)
@@ -119,7 +129,8 @@ for batch in data_loader:
         # inference
 
         model.eval()
-        net_output = model(rainy_images)
+        # net_output = model(rainy_images)
+        net_output = model(rainy_images, aux_model=aux_model)
         time = epoch_timer.toc()
         print("Time: ", time)
         total_time += time
@@ -127,6 +138,7 @@ for batch in data_loader:
 
         denoised = np.clip(net_output[0].permute(1,2,0).detach().cpu().numpy(), 0, 1)
         plt.imsave(os.path.join(save_path,name[0]), denoised)
+        # plt.imsave(os.path.join(save_path,"test" + str(j) + ".png"), denoised)
     
     except Exception as e:
         print("Exception occur: ", e)
