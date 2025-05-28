@@ -13,7 +13,7 @@ iqa_metric_ssim = pyiqa.create_metric('ssim', device=device)
 # 資料夾路徑
 dataset = input('請輸入要處理的 dataset 名稱（例如：Rain12、Rain100L、Rain800）：').strip()
 
-input_dir = f'dataset/{dataset}/result_baseline_R2A'
+input_dir = f'dataset/{dataset}/result_result_reparameter_one_layer_20250527'
 target_dir = f'dataset/{dataset}/target'
 
 # 取得所有檔名（假設兩邊檔名一致）
@@ -41,5 +41,6 @@ for filename in tqdm(input_files):
 # 計算平均 PSNR
 average_psnr = sum(scores_psnr) / len(scores_psnr) if scores_psnr else 0
 average_ssim = sum(scores_ssim) / len(scores_ssim) if scores_ssim else 0
+print(f"There are {len(scores_ssim)} images.")
 print(f'Average PSNR: {average_psnr:.3f}')
 print(f'Average SSIM: {average_ssim:.3f}')

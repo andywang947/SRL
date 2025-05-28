@@ -118,9 +118,46 @@ class SDR_Dataset(Dataset):
             splits = x.split('.')
             if splits[-1] not in ['png', 'jpg', 'jpeg']:
                 raise ValueError
-            
 
 
+def SDR_dataloader_masked(path, batch_size=1, num_workers=0):
+    dataloader = DataLoader(
+        SDR_Dataset_masked(path),
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=True
+    )
+    return dataloader
+
+class SDR_Dataset_masked(Dataset):
+    def __init__(self, image_dir, transform=None):
+        self.image_dir = image_dir
+        self.transform = transform
+        self.image_list = os.listdir(os.path.join(image_dir)) 
+        self._check_image(self.image_list)
+        self.image_list.sort()
+        
+    def __len__(self):
+        return len(self.image_list)
+    
+    def __getitem__(self, idx):
+
+        parent_dir = os.path.dirname(os.path.dirname(self.image_dir))
+        last_dir = os.path.basename(self.image_dir) 
+        input_masked_path = parent_dir + "/input_masked/" + last_dir + ".png"
+
+        input_masked = Image.open(input_masked_path).convert("RGB")
+        input_masked = F.to_tensor(input_masked)
+
+        return input_masked
+    
+    @staticmethod
+    def _check_image(lst):
+        for x in lst:
+            splits = x.split('.')
+            if splits[-1] not in ['png', 'jpg', 'jpeg']:
+                raise ValueError
 
 def train_all_dataloader(image_dir, batch_size=64, num_workers=0, use_transform=True):
     transform = None

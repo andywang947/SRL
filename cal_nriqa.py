@@ -14,7 +14,7 @@ metric_brisque = pyiqa.create_metric('brisque', device=device)
 metric_niqe = pyiqa.create_metric('niqe', device=device)
 
 # 資料夾路徑
-img_dir_path = 'dataset/DDN_SIRR_real/result_baseline_R2A'
+img_dir_path = 'dataset/DDN_SIRR_real/result_result_reparameter_one_layer_20250527'
 input_files = sorted(os.listdir(img_dir_path))
 
 # 儲存結果
@@ -42,5 +42,6 @@ average_brisque = sum(scores_brisque) / len(scores_brisque) if scores_brisque el
 average_niqe = sum(scores_niqe) / len(scores_niqe) if scores_niqe else 0
 
 # 印出結果
+print(f'There are {len(scores_brisque)} images.')
 print(f'\nAverage BRISQUE: {average_brisque:.3f}')
 print(f'Average NIQE: {average_niqe:.3f}')

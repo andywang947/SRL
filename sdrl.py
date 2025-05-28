@@ -12,7 +12,7 @@ from tqdm import tqdm
 from utils import Timer
 from network import UNet, ResNet, DnCNN
 from restormer import Restormer
-from data import SDR_dataloader, train_dataloader
+from data import SDR_dataloader, SDR_dataloader_masked, train_dataloader
 
 import torch.nn.functional as F
 
@@ -21,15 +21,25 @@ torch.manual_seed(3)
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--dataset", type=str, default="DDN_SIRR_real", help="Dataset name")
-parser.add_argument("--result_name", type=str, default="result_reparameter_one_layer_20250527", help="Dataset name")
+parser.add_argument("--result_name", type=str, default="20250528_masked_autoencoder", help="Dataset name")
 parser.add_argument("--epoch", type=int, default=100)
 parser.add_argument("--backbone", type=str, default="Unet", help= "select backbone to be used in SDRL")
+parser.add_argument("--use_mae", action="store_true", help="Whether to use masked autoencoder")
+parser.add_argument("--use_aux", action="store_true", help="Whether to use auxiliary model")
 
 opt = parser.parse_args()
 
 opt.rainy_data_path = f"./dataset/{opt.dataset}/"
 opt.sdr_data_path = f"./dataset/{opt.dataset}/sdr/"
 opt.result_path = f"./dataset/{opt.dataset}/result_{opt.result_name}/"
+
+use_mae = opt.use_mae
+use_aux = opt.use_aux
+
+if use_mae:
+    print("now we use masked autoencoder")
+else:
+    print("now we don't use masked autoencoder")
 
 data_path = opt.rainy_data_path
 save_path = opt.result_path
@@ -73,7 +83,12 @@ for batch in data_loader:
         
         if opt.backbone == "Unet":
             model = UNet(is_target=True)
-            aux_model = UNet(input_channels=1)
+
+            if use_aux:
+                print("now we use auxiliary model")
+                aux_model = UNet(input_channels=1)
+            else:
+                print("now we don't use auxiliary model")
 
         elif opt.backbone == "ResNet":
             model = ResNet()
@@ -85,19 +100,40 @@ for batch in data_loader:
         model = model.to(device)
         optimizer = Adam(model.parameters(), lr=0.001)
 
-        aux_model = aux_model.to(device)
-        aux_optimizer = Adam(aux_model.parameters(), lr=0.001)
+        if use_aux:
+            aux_model = aux_model.to(device)
+            aux_optimizer = Adam(aux_model.parameters(), lr=0.001)
 
         inner_batch_size = 1
         rainy_images = rainy_images.to(device)
         clean_images = clean_images.to(device)
 
         model.train()
-        aux_model.train()
+        if use_aux:
+            aux_model.train()
+
+        if use_mae:
+            print("now we want to train masked autoencoder.")
+            SDR_loader_masked = SDR_dataloader_masked(os.path.join(sdr_path, name[0][:-4]), batch_size=inner_batch_size)
+            for j in tqdm(range(epochs)):
+                model.train()
+
+                for k, inner_batch in enumerate(SDR_loader_masked):
+                    input_masked = inner_batch
+                    input_masked = F.pad(input_masked, (0,padw,0,padh), 'reflect')
+
+                    input_masked = input_masked.to(device)
+
+                    net_output = model(input_masked)
+                    loss = loss_function(net_output, rainy_images)
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+            print("next, we will train from input to pseudo derained reference.")
+
 
         SDR_loader = SDR_dataloader(os.path.join(sdr_path, name[0][:-4]), batch_size=inner_batch_size)
         
-
         for j in tqdm(range(epochs)):
             model.train()
 
@@ -113,14 +149,15 @@ for batch in data_loader:
                 sdr_edge_map = sdr_edge_map.to(device)
 
                 images = torch.cat([rainy_images for _ in range(len(sdr_images))],0)
-
-                aux_net_output = aux_model(input_edge_map)
-                aux_loss = loss_function(aux_net_output, sdr_edge_map)
-                aux_optimizer.zero_grad()
-                aux_loss.backward()
-                aux_optimizer.step()
-
-                net_output = model(images, aux_model=aux_model)
+                if use_aux:
+                    aux_net_output = aux_model(input_edge_map)
+                    aux_loss = loss_function(aux_net_output, sdr_edge_map)
+                    aux_optimizer.zero_grad()
+                    aux_loss.backward()
+                    aux_optimizer.step()
+                    net_output = model(images, aux_model=aux_model)
+                else:
+                    net_output = model(images)
                 loss = loss_function(net_output, sdr_images)
                 optimizer.zero_grad()
                 loss.backward()
@@ -130,7 +167,10 @@ for batch in data_loader:
 
         model.eval()
         # net_output = model(rainy_images)
-        net_output = model(rainy_images, aux_model=aux_model)
+        if use_aux:
+            net_output = model(rainy_images, aux_model=aux_model)
+        else:
+            net_output = model(rainy_images)
         time = epoch_timer.toc()
         print("Time: ", time)
         total_time += time
