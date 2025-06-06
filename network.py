@@ -97,8 +97,13 @@ class UNet(nn.Module):
                               bn=False, activ=None, conv_bias=True)
         self.is_target = is_target
         if is_target:
-            self.alpha = nn.Parameter(torch.tensor(0.0))  # 初始加權比例 0
+            self.alpha = nn.ParameterList([
+                nn.Parameter(torch.tensor(0.0)) for _ in range(self.layer_size)
+            ])
 
+            self.alpha_dec = nn.ParameterList([
+                nn.Parameter(torch.tensor(0.0)) for _ in range(self.layer_size)
+            ])
     def forward(self, input, aux_model=None):
         h_dict = {}  # for the output of enc_N
         h_dict['h_0']= input
@@ -106,10 +111,10 @@ class UNet(nn.Module):
         for i in range(1, self.layer_size + 1):
             l_key = 'enc_{:d}'.format(i)
             h_key = 'h_{:d}'.format(i)
-            if i == 4 and aux_model is not None:
+            if aux_model is not None and i != 1:
                 target_feature = getattr(self, l_key)(h_dict[h_key_prev])
                 aux_feature = getattr(aux_model, l_key)(h_dict[h_key_prev])
-                h_dict[h_key] = target_feature + self.alpha * aux_feature
+                h_dict[h_key] = target_feature + self.alpha[i - 1] * aux_feature
             else :
                 h_dict[h_key] = getattr(self, l_key)(h_dict[h_key_prev])
 
@@ -123,7 +128,12 @@ class UNet(nn.Module):
             dec_l_key = 'dec_{:d}'.format(i)
             h = F.interpolate(h, scale_factor=2, mode=self.upsampling_mode)
             h = torch.cat([h, h_dict[enc_h_key]], dim=1)
-            h= getattr(self, dec_l_key)(h)
+            if aux_model is not None and i != 1:
+                target_feature = getattr(self, dec_l_key)(h)
+                aux_feature = getattr(aux_model, dec_l_key)(h)
+                h = target_feature + self.alpha_dec[i - 1] * aux_feature
+            else:
+                h = getattr(self, dec_l_key)(h)
 
         return h
 

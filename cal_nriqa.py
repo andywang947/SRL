@@ -14,7 +14,7 @@ metric_brisque = pyiqa.create_metric('brisque', device=device)
 metric_niqe = pyiqa.create_metric('niqe', device=device)
 
 # 資料夾路徑
-img_dir_path = 'dataset/DDN_SIRR_real/result_result_reparameter_one_layer_20250527'
+img_dir_path = 'dataset/DDN_SIRR_real/result'
 input_files = sorted(os.listdir(img_dir_path))
 
 # 儲存結果
