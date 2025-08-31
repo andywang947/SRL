@@ -90,27 +90,39 @@ class SDR_Dataset(Dataset):
         return len(self.image_list)
     
     def __getitem__(self, idx):
-        p_label = Image.open(os.path.join(self.image_dir, self.image_list[idx])).convert("RGB")
+        sdr_img = Image.open(os.path.join(self.image_dir, self.image_list[idx])).convert("RGB")
 
         parent_dir = os.path.dirname(os.path.dirname(self.image_dir))
         last_dir = os.path.basename(self.image_dir) 
         input_edge_map_path = parent_dir + "/input_edge/" + last_dir + ".png"
 
+        input_img_path = parent_dir + "/input/" + last_dir + ".png"
+
 
         sdr_edge_map_path = parent_dir + "/sdr_edge/" + last_dir
         sdr_edge_map_path = os.path.join(sdr_edge_map_path, self.image_list[idx])
 
-        input_edge_map = Image.open(input_edge_map_path).convert("L")
-        sdr_edge_map = Image.open(sdr_edge_map_path).convert("L")
+        input_img = Image.open(input_img_path).convert("RGB")
 
-        if self.transform:
-            p_label = self.transform(p_label)
-        else:
-            p_label = F.to_tensor(p_label)
-            input_edge_map = F.to_tensor(input_edge_map)
-            sdr_edge_map = F.to_tensor(sdr_edge_map)
+        sdr_img = F.to_tensor(sdr_img)
+        input_img = F.to_tensor(input_img)
+        
+        sdr_img, input_img = self.random_crop_pair(sdr_img, input_img)
 
-        return p_label, input_edge_map, sdr_edge_map
+        return sdr_img, input_img
+
+    @staticmethod
+    def random_crop_pair(t1, t2, crop_size=256):
+        _, h, w = t1.shape
+        ch, cw = crop_size, crop_size
+        
+        if h < ch or w < cw:
+            raise ValueError(f"Image too small for crop: ({h}, {w}) vs ({ch}, {cw})")
+
+        i = random.randint(0, h - ch)  # 高度起點
+        j = random.randint(0, w - cw)  # 寬度起點
+
+        return t1[:, i:i+ch, j:j+cw], t2[:, i:i+ch, j:j+cw]
     
     @staticmethod
     def _check_image(lst):
