@@ -10,5 +10,7 @@ datasets=("Rain12" "Rain100L" "Rain800" "DDN_SIRR_real" "DDN_SIRR_syn")
 for dataset in "${datasets[@]}"
 do
     echo "Running SDRL on dataset: $dataset"
-    python sdrl.py --dataset "$dataset" --result_name result --use_aux
+    python sdrl.py --dataset "$dataset" --result_name "20251022_only_pixel_loss"
 done
+
+# nohup bash run_all.sh > run_all_20251110_CUDA_2.log 2>&1 &

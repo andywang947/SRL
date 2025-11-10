@@ -3,6 +3,9 @@ import torch
 import os
 from tqdm import tqdm
 
+# 資料夾路徑
+dataset = input('please input the dataset name to calculate (ex: Rain12, Rain100L, Rain800, DDN_SIRR_syn）：').strip()
+
 # 檢查是否有 CUDA
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -10,10 +13,8 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 iqa_metric_psnr = pyiqa.create_metric('psnr', device=device)
 iqa_metric_ssim = pyiqa.create_metric('ssim', device=device)
 
-# 資料夾路徑
-dataset = input('請輸入要處理的 dataset 名稱（例如：Rain12、Rain100L、Rain800）：').strip()
-
-input_dir = f'dataset/{dataset}/result'
+input_dir = f'dataset/{dataset}/result_baseline_R2A'
+print(f"The input dictionary now is: {input_dir}")
 target_dir = f'dataset/{dataset}/target'
 
 # 取得所有檔名（假設兩邊檔名一致）

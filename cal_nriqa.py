@@ -4,7 +4,7 @@ import os
 from tqdm import tqdm
 
 # 顯示支援的模型名稱（可選）
-print(pyiqa.list_models())
+# print(pyiqa.list_models())
 
 # 裝置選擇
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -14,7 +14,8 @@ metric_brisque = pyiqa.create_metric('brisque', device=device)
 metric_niqe = pyiqa.create_metric('niqe', device=device)
 
 # 資料夾路徑
-img_dir_path = 'dataset/DDN_SIRR_real/result'
+img_dir_path = 'dataset/DDN_SIRR_real/result_20251019_mask_loss_channel_consistency_loss_original_loss'
+# img_dir_path = 'dataset/DDN_SIRR_real/R2A'
 input_files = sorted(os.listdir(img_dir_path))
 
 # 儲存結果
@@ -36,6 +37,7 @@ for filename in tqdm(input_files):
         scores_niqe.append(score_niqe)
     except AssertionError:
         print(f"Skipping {input_path} (NIQE): image has zero variance")
+    print(f"for image {filename}, brisque:{score_brisque}, niqe:{score_niqe}")
 
 # 計算平均
 average_brisque = sum(scores_brisque) / len(scores_brisque) if scores_brisque else 0
