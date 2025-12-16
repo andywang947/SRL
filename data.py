@@ -101,7 +101,7 @@ class SDR_Dataset(Dataset):
         return len(self.image_list)
     
     def __getitem__(self, idx):
-        sdr_img = Image.open(os.path.join(self.image_dir, self.image_list[idx])).convert("RGB")
+        # sdr_img = Image.open(os.path.join(self.image_dir, self.image_list[idx])).convert("RGB")
 
         parent_dir = os.path.dirname(os.path.dirname(self.image_dir))
         last_dir = os.path.basename(self.image_dir) 
@@ -109,15 +109,21 @@ class SDR_Dataset(Dataset):
         base_img_path = os.path.join(parent_dir, "input")
         rain_mask_path = os.path.join(parent_dir, "ldgp")
         # non_rain_mask_path = os.path.join(parent_dir, "non_rain_mask")
-        non_rain_mask_path = os.path.join(parent_dir, "nonrain_mean")
+        non_rain_mask_path = os.path.join(parent_dir, "ldgp")
+        sdr_fuse_path = os.path.join(parent_dir, "sdr_fuse")
+        new_sdr_path = os.path.join(parent_dir, "sdr_fuse") # now we don't use 
         if os.path.exists(os.path.join (base_img_path, (last_dir + ".png"))):
             input_img_path = os.path.join (base_img_path, (last_dir + ".png"))
             rain_mask_path = os.path.join (rain_mask_path, (last_dir + ".png"))
             non_rain_mask_path = os.path.join (non_rain_mask_path, (last_dir + ".png"))
+            sdr_fuse_path = os.path.join (sdr_fuse_path, (last_dir + ".png"))
+            new_sdr_path = os.path.join (new_sdr_path, (last_dir + ".png"))
         else:
             input_img_path = os.path.join (base_img_path, (last_dir + ".jpg"))
             rain_mask_path = os.path.join (rain_mask_path, (last_dir + ".jpg"))
             non_rain_mask_path = os.path.join (non_rain_mask_path, (last_dir + ".jpg"))
+            sdr_fuse_path = os.path.join (sdr_fuse_path, (last_dir + ".jpg"))
+            new_sdr_path = os.path.join (new_sdr_path, (last_dir + ".jpg"))
 
 
         sdr_edge_map_path = parent_dir + "/sdr_edge/" + last_dir
@@ -126,20 +132,20 @@ class SDR_Dataset(Dataset):
         input_img = Image.open(input_img_path).convert("RGB")
         rain_mask = Image.open(rain_mask_path).convert("L")
         non_rain_mask = Image.open(non_rain_mask_path).convert("L")
-        # from torchvision.transforms import ColorJitter
-        # jitter = ColorJitter(brightness=(0.6, 1.4))
-        # input_img = jitter(input_img)
-        # transforms.ColorJitter(brightness=(0.6, 1.4))
+        sdr_img = Image.open(sdr_fuse_path).convert("RGB")
+        new_sdr_img = Image.open(new_sdr_path).convert("RGB")
 
         sdr_img = F.to_tensor(sdr_img)
         input_img = F.to_tensor(input_img)
         rain_mask = F.to_tensor(rain_mask)
         non_rain_mask = F.to_tensor(non_rain_mask)
+        new_sdr_img = F.to_tensor(new_sdr_img)
 
         _, h, w = input_img.shape
         if h > self.crop_size and w > self.crop_size:
             # sdr_img, input_img, rain_mask = self.random_crop_pair(sdr_img, input_img, rain_mask, crop_size=self.crop_size)
-            sdr_img, input_img, rain_mask, non_rain_mask = self.random_crop_pair(sdr_img, input_img, rain_mask, non_rain_mask, crop_size=self.crop_size)
+            sdr_img, input_img, rain_mask, non_rain_mask, new_sdr_img = self.random_crop_pair(sdr_img, input_img, rain_mask, non_rain_mask, new_sdr_img, crop_size=self.crop_size)
+            sdr_img, input_img, rain_mask, non_rain_mask, new_sdr_img = self.random_flip(sdr_img, input_img, rain_mask, non_rain_mask, new_sdr_img)
         else:
             factor = 16
             H,W = ((h+factor)//factor)*factor, ((w+factor)//factor)*factor
@@ -149,10 +155,10 @@ class SDR_Dataset(Dataset):
             input_img = NF.pad(input_img, (0,padw,0,padh), 'reflect')
             rain_mask = NF.pad(rain_mask, (0,padw,0,padh), 'reflect')
 
-        return sdr_img, input_img, rain_mask, non_rain_mask
+        return sdr_img, input_img, rain_mask, non_rain_mask, new_sdr_img
 
     @staticmethod
-    def random_crop_pair(t1, t2, rain_mask, non_rain_mask, crop_size=256):
+    def random_crop_pair(t1, t2, rain_mask, non_rain_mask, new_sdr_img, crop_size=256):
         _, h, w = t1.shape
         ch, cw = crop_size, crop_size
         
@@ -162,8 +168,23 @@ class SDR_Dataset(Dataset):
         i = random.randint(0, h - ch)  # 高度起點
         j = random.randint(0, w - cw)  # 寬度起點
 
-        return t1[:, i:i+ch, j:j+cw], t2[:, i:i+ch, j:j+cw], rain_mask[:, i:i+ch, j:j+cw], non_rain_mask[:, i:i+ch, j:j+cw]
+        return t1[:, i:i+ch, j:j+cw], t2[:, i:i+ch, j:j+cw], rain_mask[:, i:i+ch, j:j+cw], non_rain_mask[:, i:i+ch, j:j+cw], new_sdr_img[:, i:i+ch, j:j+cw]
     
+    @staticmethod
+    def random_flip(*tensors):
+        """
+        tensors: list of [C, H, W]
+        """
+        # horizontal flip
+        if random.random() < 0.5:
+            tensors = [torch.flip(t, dims=[2]) for t in tensors]  # W
+
+        # vertical flip
+        if random.random() < 0.5:
+            tensors = [torch.flip(t, dims=[1]) for t in tensors]  # H
+
+        return tensors
+
     @staticmethod
     def _check_image(lst):
         for x in lst:

@@ -1,7 +1,10 @@
-import pyiqa
-import torch
 import os
 from tqdm import tqdm
+
+# 互動輸入：資料集名稱、目前結果資料夾、baseline 資料夾
+dataset = input('請輸入 dataset 名稱（例如：Rain12、Rain100L、Rain800）：').strip()
+import pyiqa
+import torch
 
 # 設備
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -10,12 +13,9 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 metric_psnr = pyiqa.create_metric('psnr', device=device)
 metric_ssim = pyiqa.create_metric('ssim', device=device)
 
-# 互動輸入：資料集名稱、目前結果資料夾、baseline 資料夾
-dataset = input('請輸入 dataset 名稱（例如：Rain12、Rain100L、Rain800）：').strip()
-# current_subdir = input('請輸入「目前結果」資料夾名（例如：R2A(30.807)）：').strip()
-current_subdir = "result_20251022_only_pixel_loss"
-# baseline_subdir = input('請輸入 baseline 資料夾名：').strip()
-# baseline_subdir = "result_20251019_mask_loss_channel_consistency_loss_original_loss"
+current_subdir = "result_20251216_new_loss"
+if dataset == "test":
+    current_subdir = "result_test"
 baseline_subdir = "R2A"
 
 # 路徑
@@ -65,14 +65,12 @@ for filename in tqdm(common_files, desc='Evaluating'):
     ssim_base_list.append(ssim_base)
 
     difference = psnr_cur - psnr_base
-
+    threshold = 0
     if psnr_cur > psnr_base:
         win_psnr_cnt += 1
-        # if difference > 1:
-        #     print(f"name: {filename} win, difference = {difference}")
+        print(f"name: {filename} win, difference = {difference}")
     else:
-        if abs(difference) > 1:
-            print(f"name: {filename} lose, difference = {difference}")
+        print(f"name: {filename} lose, difference = {difference}")
     if ssim_cur > ssim_base:
         win_ssim_cnt += 1
 
@@ -98,13 +96,3 @@ print(f'[PSNR]   current = {avg_psnr_cur:.3f} | baseline = {avg_psnr_base:.3f} |
 print(f'         贏的張數：{win_psnr_cnt}/{n}（{win_psnr_cnt/n*100:.1f}%）')
 print(f'[SSIM]   current = {avg_ssim_cur:.4f} | baseline = {avg_ssim_base:.4f} | Δ = {delta_ssim:+.4f}')
 print(f'         贏的張數：{win_ssim_cnt}/{n}（{win_ssim_cnt/n*100:.1f}%）')
-
-# （選用）想列出前幾張進步/退步最大的檔案可打開以下區塊
-# top_k = 5
-# per_image_stats.sort(key=lambda x: (x[1]-x[2]), reverse=True)  # 依 PSNR 差排序
-# print('\nPSNR 進步最大的前幾張：')
-# for fn, pc, pb, sc, sb in per_image_stats[:top_k]:
-#     print(f'  {fn}: ΔPSNR={pc-pb:+.3f}, current={pc:.3f}, base={pb:.3f}')
-# print('\nPSNR 退步最大的前幾張：')
-# for fn, pc, pb, sc, sb in per_image_stats[-top_k:]:
-#     print(f'  {fn}: ΔPSNR={pc-pb:+.3f}, current={pc:.3f}, base={pb:.3f}')
