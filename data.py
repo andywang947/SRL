@@ -10,7 +10,7 @@ import time
 import torch
 
 g = torch.Generator()
-g.manual_seed(int(time.time()))  # 用時間當作 seed
+g.manual_seed(int(time.time()))
 
 def train_dataloader(image_dir, batch_size=64, num_workers=0):
     transform = None
@@ -116,15 +116,13 @@ class SDR_Dataset(Dataset):
             input_img_path = os.path.join (base_img_path, (last_dir + ".png"))
             rain_mask_path = os.path.join (rain_mask_path, (last_dir + ".png"))
             non_rain_mask_path = os.path.join (non_rain_mask_path, (last_dir + ".png"))
-            sdr_fuse_path = os.path.join (sdr_fuse_path, (last_dir + ".png"))
-            new_sdr_path = os.path.join (new_sdr_path, (last_dir + ".png"))
         else:
             input_img_path = os.path.join (base_img_path, (last_dir + ".jpg"))
             rain_mask_path = os.path.join (rain_mask_path, (last_dir + ".jpg"))
             non_rain_mask_path = os.path.join (non_rain_mask_path, (last_dir + ".jpg"))
-            sdr_fuse_path = os.path.join (sdr_fuse_path, (last_dir + ".jpg"))
-            new_sdr_path = os.path.join (new_sdr_path, (last_dir + ".jpg"))
-
+            
+        sdr_fuse_path = os.path.join (sdr_fuse_path, (last_dir + ".png"))
+        new_sdr_path = os.path.join (new_sdr_path, (last_dir + ".png"))
 
         sdr_edge_map_path = parent_dir + "/sdr_edge/" + last_dir
         sdr_edge_map_path = os.path.join(sdr_edge_map_path, self.image_list[idx])
