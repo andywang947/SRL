@@ -59,7 +59,7 @@ class RainDataset(Dataset):
         sdr_img_path = sdr_img_path.replace(".png", "")
         sdr_img_path = sdr_img_path.replace(".jpg", "")
         sdr_img_path = os.path.join(sdr_img_path,"0.png")
-        label = Image.open(sdr_img_path).convert("RGB")
+        label = Image.open(os.path.join(self.image_dir, 'sdr_fuse', self.image_list[idx])).convert("RGB")
         
         image = F.to_tensor(image)
         label = F.to_tensor(label)
@@ -82,8 +82,9 @@ def SDR_dataloader(path, batch_size=1, num_workers=0):
         SDR_Dataset(path),
         batch_size=batch_size,
         shuffle=False,
-        num_workers=num_workers,
-        pin_memory=True
+        num_workers=4,
+        pin_memory=True,
+        persistent_workers=True
     )
     return dataloader
 
@@ -96,48 +97,50 @@ class SDR_Dataset(Dataset):
         self._check_image(self.image_list)
         self.image_list.sort()
         self.crop_size = 256
+        self.parent_dir = os.path.dirname(os.path.dirname(self.image_dir))
+        self.input_img_path = os.path.join(self.parent_dir, "input")
+        self.img_name = os.path.basename(self.image_dir) 
+        # sdr_img = Image.open(os.path.join(self.image_dir, self.image_list[idx])).convert("RGB")
+
+        rain_mask_path = os.path.join(self.parent_dir, "ldgp")
+        # non_rain_mask_path = os.path.join(parent_dir, "non_rain_mask")
+        non_rain_mask_path = os.path.join(self.parent_dir, "ldgp")
+        sdr_fuse_path = os.path.join(self.parent_dir, "sdr_fuse")
+        new_sdr_path = os.path.join(self.parent_dir, "sdr_fuse") # now we don't use 
+        if os.path.exists(os.path.join (self.input_img_path, (self.img_name + ".png"))):
+            input_img_path = os.path.join (self.input_img_path, (self.img_name + ".png"))
+            rain_mask_path = os.path.join (rain_mask_path, (self.img_name + ".png"))
+            non_rain_mask_path = os.path.join (non_rain_mask_path, (self.img_name + ".png"))
+        else:
+            input_img_path = os.path.join (self.input_img_path, (self.img_name + ".jpg"))
+            rain_mask_path = os.path.join (rain_mask_path, (self.img_name + ".jpg"))
+            non_rain_mask_path = os.path.join (non_rain_mask_path, (self.img_name + ".jpg"))
+            
+        sdr_fuse_path = os.path.join (sdr_fuse_path, (self.img_name + ".png"))
+        new_sdr_path = os.path.join (new_sdr_path, (self.img_name + ".png"))
+
+        self.input_img = Image.open(input_img_path).convert("RGB")
+        self.rain_mask = Image.open(rain_mask_path).convert("L")
+        self.non_rain_mask = Image.open(non_rain_mask_path).convert("L")
+        self.sdr_img = Image.open(sdr_fuse_path).convert("RGB")
+        self.new_sdr_img = Image.open(new_sdr_path).convert("RGB")
+
+        self.sdr_img = F.to_tensor(self.sdr_img)
+        self.input_img = F.to_tensor(self.input_img)
+        self.rain_mask = F.to_tensor(self.rain_mask)
+        self.non_rain_mask = F.to_tensor(self.non_rain_mask)
+        self.new_sdr_img = F.to_tensor(self.new_sdr_img)
         
     def __len__(self):
         return len(self.image_list)
     
     def __getitem__(self, idx):
-        # sdr_img = Image.open(os.path.join(self.image_dir, self.image_list[idx])).convert("RGB")
 
-        parent_dir = os.path.dirname(os.path.dirname(self.image_dir))
-        last_dir = os.path.basename(self.image_dir) 
-
-        base_img_path = os.path.join(parent_dir, "input")
-        rain_mask_path = os.path.join(parent_dir, "ldgp")
-        # non_rain_mask_path = os.path.join(parent_dir, "non_rain_mask")
-        non_rain_mask_path = os.path.join(parent_dir, "ldgp")
-        sdr_fuse_path = os.path.join(parent_dir, "sdr_fuse")
-        new_sdr_path = os.path.join(parent_dir, "sdr_fuse") # now we don't use 
-        if os.path.exists(os.path.join (base_img_path, (last_dir + ".png"))):
-            input_img_path = os.path.join (base_img_path, (last_dir + ".png"))
-            rain_mask_path = os.path.join (rain_mask_path, (last_dir + ".png"))
-            non_rain_mask_path = os.path.join (non_rain_mask_path, (last_dir + ".png"))
-        else:
-            input_img_path = os.path.join (base_img_path, (last_dir + ".jpg"))
-            rain_mask_path = os.path.join (rain_mask_path, (last_dir + ".jpg"))
-            non_rain_mask_path = os.path.join (non_rain_mask_path, (last_dir + ".jpg"))
-            
-        sdr_fuse_path = os.path.join (sdr_fuse_path, (last_dir + ".png"))
-        new_sdr_path = os.path.join (new_sdr_path, (last_dir + ".png"))
-
-        sdr_edge_map_path = parent_dir + "/sdr_edge/" + last_dir
-        sdr_edge_map_path = os.path.join(sdr_edge_map_path, self.image_list[idx])
-
-        input_img = Image.open(input_img_path).convert("RGB")
-        rain_mask = Image.open(rain_mask_path).convert("L")
-        non_rain_mask = Image.open(non_rain_mask_path).convert("L")
-        sdr_img = Image.open(sdr_fuse_path).convert("RGB")
-        new_sdr_img = Image.open(new_sdr_path).convert("RGB")
-
-        sdr_img = F.to_tensor(sdr_img)
-        input_img = F.to_tensor(input_img)
-        rain_mask = F.to_tensor(rain_mask)
-        non_rain_mask = F.to_tensor(non_rain_mask)
-        new_sdr_img = F.to_tensor(new_sdr_img)
+        sdr_img = self.sdr_img
+        input_img = self.input_img
+        rain_mask = self.rain_mask
+        non_rain_mask = self.non_rain_mask
+        new_sdr_img = self.new_sdr_img
 
         _, h, w = input_img.shape
         if h > self.crop_size and w > self.crop_size:
