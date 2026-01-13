@@ -13,15 +13,18 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 metric_psnr = pyiqa.create_metric('psnr', device=device)
 metric_ssim = pyiqa.create_metric('ssim', device=device)
 
-current_subdir = "result_20251216_new_loss"
+current_subdir = "result_20260109_rain_mask"
 if dataset == "test":
     current_subdir = "result_test"
-baseline_subdir = "R2A"
+baseline_subdir = "result_20251222_addrain"
 
 # 路徑
 target_dir = f'dataset/{dataset}/target'
 current_dir = f'dataset/{dataset}/{current_subdir}'
 baseline_dir = f'dataset/{dataset}/{baseline_subdir}'
+
+print(f"the current dir is : {current_dir}")
+print(f"the baseline dir is : {baseline_dir}")
 
 # 基本檢查
 for d in [target_dir, current_dir, baseline_dir]:
@@ -29,10 +32,19 @@ for d in [target_dir, current_dir, baseline_dir]:
         raise FileNotFoundError(f'資料夾不存在：{d}')
 
 # 只比「三邊都有」的檔名
-current_files = set(os.listdir(current_dir))
-baseline_files = set(os.listdir(baseline_dir))
-target_files = set(os.listdir(target_dir))
-common_files = sorted(list(current_files & baseline_files & target_files))
+def build_stem_map(dir_path):
+    m = {}
+    for f in os.listdir(dir_path):
+        stem, ext = os.path.splitext(f)
+        if ext.lower() in {".jpg", ".png"}:
+            m[stem] = f   # 若同 stem 有多個副檔名，取其中一個即可
+    return m
+
+cur_map  = build_stem_map(current_dir)
+base_map = build_stem_map(baseline_dir)
+tgt_map  = build_stem_map(target_dir)
+
+common_files = sorted(set(cur_map) & set(base_map) & set(tgt_map))
 
 if not common_files:
     raise RuntimeError('找不到三邊共有的檔案，請確認資料夾與檔名一致。')
@@ -48,9 +60,10 @@ win_ssim_cnt = 0
 per_image_stats = []  # (filename, psnr_cur, psnr_base, ssim_cur, ssim_base)
 
 for filename in tqdm(common_files, desc='Evaluating'):
-    tgt_path = os.path.join(target_dir, filename)
-    cur_path = os.path.join(current_dir, filename)
-    base_path = os.path.join(baseline_dir, filename)
+    tgt_path  = os.path.join(target_dir,  tgt_map[filename])
+    cur_path  = os.path.join(current_dir,  cur_map[filename])
+    base_path = os.path.join(baseline_dir, base_map[filename])
+
 
     # 計算兩邊對上同一張 target 的分數
     psnr_cur = metric_psnr(cur_path, tgt_path).item()

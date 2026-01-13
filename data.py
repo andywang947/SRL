@@ -59,7 +59,7 @@ class RainDataset(Dataset):
         sdr_img_path = sdr_img_path.replace(".png", "")
         sdr_img_path = sdr_img_path.replace(".jpg", "")
         sdr_img_path = os.path.join(sdr_img_path,"0.png")
-        label = Image.open(os.path.join(self.image_dir, 'sdr_fuse', self.image_list[idx])).convert("RGB")
+        label = Image.open(os.path.join(self.image_dir, 'input', self.image_list[idx])).convert("RGB")
         
         image = F.to_tensor(image)
         label = F.to_tensor(label)
@@ -146,9 +146,9 @@ class SDR_Dataset(Dataset):
         if h > self.crop_size and w > self.crop_size:
             # sdr_img, input_img, rain_mask = self.random_crop_pair(sdr_img, input_img, rain_mask, crop_size=self.crop_size)
             sdr_img, input_img, rain_mask, _, new_sdr_img = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
-            _, _, non_rain_mask, _, _ = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
-            _, _, non_rain_mask_2, _, _ = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
-            sdr_img, input_img, rain_mask, non_rain_mask, non_rain_mask_2, new_sdr_img = self.random_flip(sdr_img, input_img, rain_mask, non_rain_mask, non_rain_mask_2, new_sdr_img)
+            _, _, non_rain_mask, _, new_sdr_img = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
+            # _, _, non_rain_mask_2, _, _ = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
+            sdr_img, input_img, rain_mask, non_rain_mask, new_sdr_img = self.random_flip(sdr_img, input_img, rain_mask, non_rain_mask, new_sdr_img)
         else:
             factor = 16
             H,W = ((h+factor)//factor)*factor, ((w+factor)//factor)*factor
