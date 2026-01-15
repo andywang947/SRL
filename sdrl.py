@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from utils import Timer
 from network import UNet
-from data import SDR_dataloader, train_dataloader
+from data import SDR_dataloader, train_dataloader, Addrain_dataloader
 from itertools import islice
 import torch.nn.functional as F
 from mask_aug import shuffle_connected_components_torch
@@ -70,8 +70,13 @@ for batch in data_loader:
 
         pseudo_model = UNet()
         pseudo_model = pseudo_model.to(device)
-
-        addrain_model = UNet(input_channels=4, output_channels=3)
+        
+        from addrain_network import AddRainNet, AddRainNet_test
+        if opt.result_name == "test":
+            print("warning: now is the test mode")
+            addrain_model = AddRainNet_test(input_channels=4, output_channels=3)        
+        else:
+            addrain_model = AddRainNet(input_channels=4, output_channels=3)
         addrain_model = addrain_model.to(device)
 
         # mask_model = UNet(input_channels=3, output_channels=1)
@@ -80,13 +85,10 @@ for batch in data_loader:
         # from network import UNetDiscriminatorSN
         # d_model = UNetDiscriminatorSN(num_in_ch=4).to(device)
 
-        # from diffusion_model import UNet_addrain
-        # from diffusion_network import DDIM
-        # addrain_unet = UNet_addrain(img_channels=7,dropout=0.0).to(device)
-        # def generate_linear_schedule(T, beta_1, beta_T):
-        #     return torch.linspace(beta_1, beta_T, T).double()
-        # beta = generate_linear_schedule(2000, 1e-6, 1e-2)
-        # addrain_model = DDIM(addrain_unet, img_channels=7, betas=beta, criterion="l1").to(device)
+        addrain_optimizer = Adam(addrain_model.parameters(), lr=0.001)
+        addrain_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(addrain_optimizer, T_max=epochs)
+        addrain_model.train()
+
 
         optimizer = Adam(model.parameters(), lr=0.001)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
@@ -97,8 +99,6 @@ for batch in data_loader:
         pseudo_optimizer = Adam(pseudo_model.parameters(), lr=0.001)
         pseudo_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(pseudo_optimizer, T_max=epochs)
 
-        addrain_optimizer = Adam(addrain_model.parameters(), lr=0.001)
-        addrain_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(addrain_optimizer, T_max=epochs)
 
         # mask_optimizer = Adam(mask_model.parameters(), lr=0.001)
         # mask_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(mask_optimizer, T_max=epochs)
@@ -109,13 +109,11 @@ for batch in data_loader:
         ldgp_img = ldgp_img.to(device)
 
         model.train()
-        addrain_model.train()
-        SDR_loader = SDR_dataloader(os.path.join(sdr_path, name[0][:-4]), batch_size=inner_batch_size)
-
+        Addrain_loader = Addrain_dataloader(os.path.join(sdr_path, name[0][:-4]), batch_size=inner_batch_size)
         for epoch in tqdm(range(epochs)):
             addrain_model.train()
             # d_model.train()
-            for k, inner_batch in enumerate(islice(SDR_loader, 200)):
+            for k, inner_batch in enumerate(islice(Addrain_loader, 50)):
                 sdr_images, input_img, rain_mask, another_rain_mask, another_input_img = inner_batch
                 
                 sdr_images = sdr_images.to(device)
@@ -124,52 +122,16 @@ for batch in data_loader:
                 another_rain_mask = another_rain_mask.to(device)
                 another_input_img = another_input_img.to(device)
 
-                # d_optimizer.zero_grad()
-                # with torch.no_grad():
-                #     real_img = another_input_img
-                #     # rain_mask_rotation = torch.flip(rain_mask, dims=[2, 3])
-                #     addrain_input = torch.cat([input_img, another_rain_mask],dim=1) # standard, use sdr to addrain to input
-                #     # addrain_input = torch.cat([sdr_images, rain_mask],dim=1) # standard, use sdr to addrain to input
-                #     addrain_output = addrain_model(addrain_input)
-                #     real_in = torch.cat([input_img, rain_mask], dim=1)   # [B,4,H,W]
-                #     fake_in = torch.cat([addrain_output, another_rain_mask], dim=1)
-                # d_real = d_model(real_in)
-                # d_fake = d_model(fake_in)
-                # d_loss = torch.mean(F.relu(1.0 - d_real)) + torch.mean(F.relu(1.0 + d_fake))
-                # d_loss.backward()
-                # d_optimizer.step()
-
                 addrain_optimizer.zero_grad()
 
-                # rain_mask_rotation = torch.flip(rain_mask, dims=[2, 3])
-                # from mask_aug import non_rain_local_mean_7x7
-                # blur_img = non_rain_local_mean_7x7(input_img, rain_mask)
-                # blur_img = input_img * (1 - rain_mask) + blur_img * (rain_mask)
-
-                # addrain_input = torch.cat([input_img, another_rain_mask],dim=1) # standard, use sdr to addrain to input
-                addrain_input = torch.cat([sdr_images, rain_mask],dim=1) # standard, use sdr to addrain to input
-                # addrain_input = torch.cat([blur_img, rain_mask],dim=1) # standard, use sdr to addrain to input
-                addrain_output = addrain_model(addrain_input)
-
-                # target_img = torch.flip(input_img, dims=[2, 3])
-                # rain_loss = ((torch.abs(addrain_output - target_img)) * (another_rain_mask)).mean()
-                # content_loss = ((torch.abs(addrain_output - input_img)) * (1 - another_rain_mask)).mean()
-
-                # loss = addrain_model(x=input_img, condition=addrain_input)
-                # with torch.no_grad():
-                #     d_output = d_model(torch.cat([addrain_output, another_rain_mask],dim=1))
-                # d_loss = -torch.mean(d_output)
-
-                loss = torch.abs(addrain_output - input_img).mean()
-                # loss = rain_loss + content_loss + d_loss
-                # loss =  content_loss + d_loss
+                addrain_output_1 = addrain_model(sdr_images, rain_mask)                
+                loss = torch.abs(addrain_output_1 - input_img).mean()
 
                 loss.backward()
                 addrain_optimizer.step()
 
             addrain_scheduler.step()
-            # d_scheduler.step()
-        
+                    
             # inference
             addrain_model.eval()
             with torch.no_grad():
@@ -177,9 +139,9 @@ for batch in data_loader:
                     addrain_mask = torch.flip(ldgp_img, dims=[2, 3])
                     # addrain_mask_weight = binary_mask_to_soft(ldgp_img)
                     addrain_mask = shuffle_connected_components_torch(ldgp_img)
-                    addrain_input = torch.cat([rainy_images, addrain_mask],dim=1)
-                    # addrain_input = torch.cat([sdr_images_target, addrain_mask_weight],dim=1)
-                    net_output = addrain_model(addrain_input)
+
+                    # addrain_input = torch.cat([rainy_images, addrain_mask],dim=1)
+                    net_output = addrain_model(rainy_images, addrain_mask)
 
                     # net_output = addrain_model.sample(condition=addrain_input,sample_timesteps=10, device=device)
                     # net_output = net_output.to(device)
@@ -188,6 +150,9 @@ for batch in data_loader:
                     # denoised = addrain_mask[0, 0].detach().cpu().numpy()
                     denoised = np.clip(net_output[0].permute(1,2,0).detach().cpu().numpy(), 0, 1)
                     plt.imsave(os.path.join(save_path,name[0]), denoised)
+
+        # print("[warning] dev for addrain model, end !")
+        # exit()
 
 
         # ###### rain mask model
@@ -230,6 +195,8 @@ for batch in data_loader:
         #             denoised = np.clip(net_output[0, 0].detach().cpu().numpy(), 0, 1)
         #             plt.imsave(os.path.join(save_path,name[0]), denoised)
         #     ####### mask model end
+        skip_batch = False
+        SDR_loader = SDR_dataloader(os.path.join(sdr_path, name[0][:-4]), batch_size=inner_batch_size)
         for j in tqdm(range(epochs)):
             if os.path.exists(img_save_path) == True and opt.result_name != "test":
                 skip_batch = True
@@ -245,23 +212,23 @@ for batch in data_loader:
                 non_rain_mask = non_rain_mask.to(device)
                 with torch.no_grad():
                     addrain_mask_1 = non_rain_mask
-
                     addrain_mask_2 = shuffle_connected_components_torch(non_rain_mask)
 
-                    addrain_input = torch.cat([input_img, addrain_mask_1],dim=1)
-                    addrain_input = addrain_model(addrain_input)
-
-                    addrain_input_2 = torch.cat([input_img, addrain_mask_2],dim=1)
-                    addrain_input_2 = addrain_model(addrain_input_2)
+                    addrain_input = addrain_model(input_img, addrain_mask_1)
+                    addrain_input_2 = addrain_model(input_img, addrain_mask_2)
 
                 pseudo_net_output_1 = pseudo_model(addrain_input)
                 pseudo_net_output_2 = pseudo_model(addrain_input_2)
-                from loss import masked_tv_loss
-                tv_loss = masked_tv_loss(pseudo_net_output_1, rain_mask)
+                # from loss import masked_tv_loss
+                # tv_loss = masked_tv_loss(pseudo_net_output_1, rain_mask)
 
-                self_loss = ((torch.abs(pseudo_net_output_1 - input_img)) * (1 - rain_mask)).mean()
+                self_loss_1 = ((torch.abs(pseudo_net_output_1 - input_img)) * (1 - rain_mask)).mean()
+                self_loss_2 = ((torch.abs(pseudo_net_output_2 - input_img)) * (1 - rain_mask)).mean()
+                self_loss = self_loss_1 + self_loss_2
+
                 consistency_loss = torch.abs(pseudo_net_output_1 - pseudo_net_output_2).mean()
-                loss = self_loss + tv_loss + consistency_loss
+                # loss = self_loss + tv_loss + consistency_loss
+                loss = (0.5 * self_loss) + consistency_loss
                 pseudo_optimizer.zero_grad()
                 loss.backward()
                 pseudo_optimizer.step()
@@ -303,14 +270,9 @@ for batch in data_loader:
 
                     # addrain_mask_1 = torch.max(non_rain_mask, rain_mask)
                     addrain_mask_1 = non_rain_mask
-                    addrain_input = torch.cat([input_img, addrain_mask_1],dim=1)
-                    addrain_input = addrain_model(addrain_input)
-
+                    addrain_input = addrain_model(input_img, addrain_mask_1)
                     addrain_mask_2 = shuffle_connected_components_torch(non_rain_mask)
-                    # addrain_mask_2 = torch.max(addrain_mask_2, rain_mask)
-
-                    addrain_input_2 = torch.cat([input_img, addrain_mask_2],dim=1)
-                    addrain_input_2 = addrain_model(addrain_input_2)
+                    addrain_input_2 = addrain_model(input_img, addrain_mask_2)
 
                 #     addrain_mask_3 = shuffle_connected_components_torch(non_rain_mask)
                 #     addrain_mask_3 = torch.max(addrain_mask_3, rain_mask)
@@ -361,9 +323,7 @@ for batch in data_loader:
                     # addrain_mask_weight = binary_mask_to_soft(ldgp_img)
                     addrain_mask = shuffle_connected_components_torch(ldgp_img)
                     # addrain_mask = (ldgp_img)
-                    addrain_input = torch.cat([rainy_images, addrain_mask],dim=1)
-                    # addrain_input = torch.cat([sdr_images_target, addrain_mask_weight],dim=1)
-                    net_output = addrain_model(addrain_input)
+                    net_output = addrain_model(rainy_images, addrain_mask)
                     denoised = np.clip(net_output[0].permute(1,2,0).detach().cpu().numpy(), 0, 1)
                     plt.imsave(os.path.join(save_path,"test_addrain" + ".png"), denoised)
 
@@ -372,6 +332,8 @@ for batch in data_loader:
             continue
         with torch.no_grad():
             net_output = model(rainy_images)
+            # net_output = pseudo_model(rainy_images)
+            # print("[warning]: now use stage 2 (pseudo model) to do test!")
         net_output = net_output[:,:,:h,:w]
         denoised = np.clip(net_output[0].permute(1,2,0).detach().cpu().numpy(), 0, 1)
 

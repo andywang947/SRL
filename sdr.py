@@ -8,10 +8,12 @@ import argparse
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--input_path", type=str, default="./dataset/Rain12/input/", help='input path')
-parser.add_argument("--ldgp_path", type=str, default="./dataset/Rain12/ldgp/", help='input path')
-parser.add_argument("--save_path", type=str, default="./dataset/Rain12/sdr/" , help='sdr save path')
-parser.add_argument("--fuse_save_path", type=str, default="./dataset/Rain12/sdr(fuse)/" , help='fuse sdr save path')
+dataset_name = "Rain100L"
+
+parser.add_argument("--input_path", type=str, default=f"./dataset/{dataset_name}/input/", help='input path')
+parser.add_argument("--ldgp_path", type=str, default=f"./dataset/{dataset_name}/ldgp/", help='input path')
+parser.add_argument("--save_path", type=str, default=f"./dataset/{dataset_name}/sdr_ori_20260109/" , help='sdr save path')
+parser.add_argument("--fuse_save_path", type=str, default=f"./dataset/{dataset_name}/sdr_fuse_ori_20260109/" , help='fuse sdr save path')
 parser.add_argument("--pow", type=int, default=0.5, help='eta in nss')
 parser.add_argument("--threshold", type=int, default=10, help='the threshold of ldgp')
 parser.add_argument("--K", type=int, default=7, help="neighbor size")

@@ -62,6 +62,7 @@ class UNet(nn.Module):
             h_key_prev = h_key
 
         h_key = 'h_{:d}'.format(self.layer_size)
+        h = h_dict[h_key]
 
         for i in range(self.layer_size, 0, -1):
             enc_h_key = 'h_{:d}'.format(i - 1)

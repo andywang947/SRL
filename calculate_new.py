@@ -12,11 +12,10 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 # 建立 metrics
 metric_psnr = pyiqa.create_metric('psnr', device=device)
 metric_ssim = pyiqa.create_metric('ssim', device=device)
-
-current_subdir = "result_20260109_rain_mask"
+current_subdir = "result_20260115_only_stage_2"
 if dataset == "test":
     current_subdir = "result_test"
-baseline_subdir = "result_20251222_addrain"
+baseline_subdir = "result_20260109_rain_mask"
 
 # 路徑
 target_dir = f'dataset/{dataset}/target'

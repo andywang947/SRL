@@ -36,8 +36,8 @@ def rain_free_edge(input_path, output_path):
 
     # 8. 轉為 uint8 並輸出
     sobel_out = (sobel_mag * 255).astype(np.uint8)
-    cv2.imwrite(output_path, sobel_out)
-    # cv2.imwrite(output_path, (img_sub * 255).astype(np.uint8))
+    # cv2.imwrite(output_path, sobel_out)
+    cv2.imwrite(output_path, (img_sub * 255).astype(np.uint8))
 
 
     print(f"✅ Done. Saved to {output_path}")

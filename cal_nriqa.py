@@ -14,8 +14,7 @@ metric_brisque = pyiqa.create_metric('brisque', device=device)
 metric_niqe = pyiqa.create_metric('niqe', device=device)
 
 # 資料夾路徑
-img_dir_path = 'dataset/DDN_SIRR_real/result_20251019_mask_loss_channel_consistency_loss_original_loss'
-# img_dir_path = 'dataset/DDN_SIRR_real/R2A'
+img_dir_path = 'dataset/DDN_SIRR_real/result_20260114_no_tv_and_stage_2_use_output_2'
 input_files = sorted(os.listdir(img_dir_path))
 
 # 儲存結果
