@@ -48,7 +48,7 @@ class AddRainNet(nn.Module):
         self.dec_3 = PCBActiv(256 + 128, 128, activ='leaky')
         self.dec_2 = PCBActiv(128 + 64, 64, activ='leaky')
         self.dec_1 = PCBActiv(64 + input_channels, output_channels, bn=False, activ=None, conv_bias=True)
-    def forward(self, x, mask):
+    def forward(self, x, mask, addrain_img):
         h_dict = {}  # for the output of enc_N
         # print("time to concate")
         model_input = torch.cat([x, mask],dim=1)
@@ -97,10 +97,10 @@ class AddRainNet_test(nn.Module):
         self.dec_3 = PCBActiv(256 + 128, 128, activ='leaky')
         self.dec_2 = PCBActiv(128 + 64, 64, activ='leaky')
         self.dec_1 = PCBActiv(64 + input_channels, output_channels, bn=False, activ=None, conv_bias=True)
-    def forward(self, x, mask):
+    def forward(self, x, mask, addrain_img):
         h_dict = {}  # for the output of enc_N
         # print("time to concate")
-        model_input = torch.cat([x, mask],dim=1)
+        model_input = torch.cat([x, mask, addrain_img],dim=1)
         h_dict['h_0']= model_input
         h_key_prev = 'h_0'
         for i in range(1, self.layer_size + 1):

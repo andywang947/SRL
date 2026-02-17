@@ -145,10 +145,11 @@ class SDR_Dataset(Dataset):
         _, h, w = input_img.shape
         if h > self.crop_size and w > self.crop_size:
             # sdr_img, input_img, rain_mask = self.random_crop_pair(sdr_img, input_img, rain_mask, crop_size=self.crop_size)
-            sdr_img, input_img, rain_mask, _, new_sdr_img = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
-            _, _, non_rain_mask, _, new_sdr_img = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
+            sdr_img, input_img, rain_mask, _, _ = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
+            _, another_input_img_1, another_mask_1, _, _ = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
+            _, another_input_img_2, another_mask_2, _, _ = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
             # _, _, non_rain_mask_2, _, _ = self.random_crop_pair(self.sdr_img, self.input_img, self.rain_mask, self.non_rain_mask, self.new_sdr_img, crop_size=self.crop_size)
-            sdr_img, input_img, rain_mask, non_rain_mask, new_sdr_img = self.random_flip(sdr_img, input_img, rain_mask, non_rain_mask, new_sdr_img)
+            sdr_img, input_img, rain_mask, another_mask_1, another_input_img_1, another_mask_2, another_input_img_2 = self.random_flip(sdr_img, input_img, rain_mask, another_mask_1, another_input_img_1,another_mask_2, another_input_img_2)
         else:
             factor = 16
             H,W = ((h+factor)//factor)*factor, ((w+factor)//factor)*factor
@@ -160,7 +161,7 @@ class SDR_Dataset(Dataset):
             non_rain_mask = NF.pad(rain_mask, (0,padw,0,padh), 'reflect')
             non_rain_mask_2 = NF.pad(rain_mask, (0,padw,0,padh), 'reflect')
 
-        return sdr_img, input_img, rain_mask, non_rain_mask, new_sdr_img
+        return sdr_img, input_img, rain_mask, another_mask_1, another_input_img_1, another_mask_2, another_input_img_2
 
     @staticmethod
     def random_crop_pair(t1, t2, rain_mask, non_rain_mask, new_sdr_img, crop_size=256):

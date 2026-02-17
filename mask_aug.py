@@ -225,6 +225,75 @@ def shuffle_connected_components_torch(
     out = torch.from_numpy(np.stack(out)).unsqueeze(1)
     return out.to(device).float()
 
+def shuffle_cc_single_preserve_gray(
+    mask_np,
+    allow_overlap=True,
+    max_trials=30
+):
+    """
+    mask_np: np.ndarray [H, W], grayscale mask (e.g. [0,1] or [0,255])
+    return: np.ndarray [H, W], shuffled grayscale mask
+    """
+    H, W = mask_np.shape
+
+    # 1. Binary mask only for CC detection
+    mask_bin = (mask_np > 0).astype(np.uint8)
+
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
+        mask_bin, connectivity=8
+    )
+
+    new_mask = np.zeros_like(mask_np, dtype=mask_np.dtype)
+
+    for label in range(1, num_labels):
+        x, y, w, h, area = stats[label]
+        if area == 0:
+            continue
+
+        # binary shape of this component
+        comp_bin = (labels[y:y+h, x:x+w] == label)
+
+        # grayscale values of this component
+        comp_gray = mask_np[y:y+h, x:x+w] * comp_bin
+
+        for _ in range(max_trials):
+            nx = random.randint(0, W - w)
+            ny = random.randint(0, H - h)
+
+            if not allow_overlap:
+                if np.any(new_mask[ny:ny+h, nx:nx+w] * comp_bin):
+                    continue
+
+            # paste grayscale component
+            new_mask[ny:ny+h, nx:nx+w] += comp_gray
+            break
+
+    return new_mask
+def shuffle_connected_components_torch_preserve_gray(
+    rain_mask,
+    allow_overlap=True
+):
+    """
+    rain_mask: torch.Tensor [B, 1, H, W], grayscale
+    return: torch.Tensor [B, 1, H, W], grayscale shuffled
+    """
+    device = rain_mask.device
+    B, _, H, W = rain_mask.shape
+
+    rain_mask_np = rain_mask.detach().cpu().numpy()
+
+    out = []
+    for b in range(B):
+        shuffled = shuffle_cc_single_preserve_gray(
+            rain_mask_np[b, 0],
+            allow_overlap=allow_overlap
+        )
+        out.append(shuffled)
+
+    out = torch.from_numpy(np.stack(out)).unsqueeze(1)
+    return out.to(device).float()
+
+
 def binary_mask_to_soft(mask, k=7):
     # mask: [B,1,H,W] in {0,1}
     # 1. blur（讓邊界變軟）

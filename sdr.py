@@ -8,12 +8,12 @@ import argparse
 
 parser = argparse.ArgumentParser()
 
-dataset_name = "Rain100L"
+dataset_name = "Rain100L_train"
 
 parser.add_argument("--input_path", type=str, default=f"./dataset/{dataset_name}/input/", help='input path')
 parser.add_argument("--ldgp_path", type=str, default=f"./dataset/{dataset_name}/ldgp/", help='input path')
-parser.add_argument("--save_path", type=str, default=f"./dataset/{dataset_name}/sdr_ori_20260109/" , help='sdr save path')
-parser.add_argument("--fuse_save_path", type=str, default=f"./dataset/{dataset_name}/sdr_fuse_ori_20260109/" , help='fuse sdr save path')
+parser.add_argument("--save_path", type=str, default=f"./dataset/{dataset_name}/sdr/" , help='sdr save path')
+parser.add_argument("--fuse_save_path", type=str, default=f"./dataset/{dataset_name}/sdr_fuse/" , help='fuse sdr save path')
 parser.add_argument("--pow", type=int, default=0.5, help='eta in nss')
 parser.add_argument("--threshold", type=int, default=10, help='the threshold of ldgp')
 parser.add_argument("--K", type=int, default=7, help="neighbor size")
@@ -127,6 +127,12 @@ total_time = 0
 
 ## SDR
 for image_name in rainy_folder:
+   print(image_name)
+
+   rainy_folder = os.listdir(input_path)                       # the input folder
+   already_folder = os.listdir(target_path2)                   # the result folder
+   rainy_folder = list(set(rainy_folder)-set(already_folder))  # input - result 
+
    make_folder(os.path.join(target_path, image_name[:-4]))
    
    rainy_image    = cv2.imread(os.path.join(input_path, image_name)) 
