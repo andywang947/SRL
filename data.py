@@ -164,7 +164,7 @@ class SDR_Dataset(Dataset):
         return sdr_img, input_img, rain_mask, another_mask_1, another_input_img_1, another_mask_2, another_input_img_2
 
     @staticmethod
-    def random_crop_pair(t1, t2, rain_mask, non_rain_mask, new_sdr_img, crop_size=256):
+    def random_crop_pair(t1, t2, rain_mask, non_rain_mask, new_sdr_img, crop_size=64):
         _, h, w = t1.shape
         ch, cw = crop_size, crop_size
         

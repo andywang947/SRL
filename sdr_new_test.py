@@ -8,13 +8,15 @@ from multiprocessing import Pool, cpu_count
 # =====================
 # Args
 # =====================
-dataset_name = "test"
+# dataset_name = "RealRain_1k_H"
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--input_path", type=str, default=f"./dataset/{dataset_name}/input/")
-parser.add_argument("--ldgp_path", type=str, default=f"./dataset/{dataset_name}/ldgp/")
-parser.add_argument("--save_path", type=str, default=f"./dataset/{dataset_name}/sdr_safe_np/")
-parser.add_argument("--fuse_save_path", type=str, default=f"./dataset/{dataset_name}/sdr_safe_fuse_np/")
+parser.add_argument("--dataset", type=str, default="test")
+
+# parser.add_argument("--input_path", type=str, default=f"./dataset/{dataset_name}/input/")
+# parser.add_argument("--ldgp_path", type=str, default=f"./dataset/{dataset_name}/ldgp/")
+# parser.add_argument("--save_path", type=str, default=f"./dataset/{dataset_name}/sdr_safe_np/")
+# parser.add_argument("--fuse_save_path", type=str, default=f"./dataset/{dataset_name}/sdr_safe_fuse_np/")
 parser.add_argument("--pow", type=float, default=0.5)
 parser.add_argument("--threshold", type=int, default=10)
 parser.add_argument("--K", type=int, default=7)
@@ -25,10 +27,15 @@ opt = parser.parse_args()
 # =====================
 # Paths / params
 # =====================
-input_path  = opt.input_path
-ldgp_path   = opt.ldgp_path
-target_path = opt.save_path
-target_path2 = opt.fuse_save_path
+input_path      = f"./dataset/{opt.dataset}/input/"
+ldgp_path       = f"./dataset/{opt.dataset}/ldgp/"
+target_path     = f"./dataset/{opt.dataset}/sdr_safe_np/"
+target_path2    = f"./dataset/{opt.dataset}/sdr_safe_fuse_np/"
+
+# input_path  = opt.input_path
+# ldgp_path   = opt.ldgp_path
+# target_path = opt.save_path
+# target_path2 = opt.fuse_save_path
 sdr_num = opt.sdr_num
 threshold = opt.threshold
 
@@ -163,6 +170,13 @@ if __name__ == "__main__":
     workers = min(cpu_count(), 8)
 
     print(f"Images: {len(images)} | Workers: {workers}")
+    import time
+    start = time.process_time()  
 
     with Pool(workers) as p:
         p.map(process_one_image, images)
+
+    stop = time.process_time()  
+    duration = stop - start
+    print("total time: " ,duration ) 
+

@@ -11,9 +11,9 @@ loss:
 addrain: test
 
 use_stage3: True
+stage3_iteration: 1
 
 teacher_weakly_aug: True
-student_strongly_aug: True
 
 architecture_figure: False
 visual_crop:

@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 # === 資料夾設定 ===
-base_dir = "dataset/test"
+base_dir = "dataset/DDN_SIRR_syn"
 input_dir = os.path.join(base_dir, "input")
 gt_dir = os.path.join(base_dir, "target")
 output_dir = os.path.join(base_dir, "rainmask_gt")

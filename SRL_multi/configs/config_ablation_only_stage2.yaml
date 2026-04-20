@@ -1,0 +1,20 @@
+loss:
+  stage_2:
+    Region_of_L_RR_use_non_rain: True # [True, False], if false, use full image.
+    use_consistency: True # [True, False], if False, don't use consistency loss
+    LRR_supervision_single: False # [True, False], if false, use dual supervision
+  stage_3:
+    LREF_supervision_single: True # [True, False], if false, use dual supervision
+    L_REF_do_mask_fusion: False # [True, False], if false, don't do the pseudo label fusion.
+    use_consistency: False # [True, False], if False, don't use consistency loss
+
+addrain: test
+
+use_stage3: False
+
+architecture_figure: False
+visual_crop:
+  top: 100
+  left: 150
+  height: 64
+  width: 64

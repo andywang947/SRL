@@ -11,65 +11,69 @@ from tqdm import tqdm
 
 from network import UNet
 from data_all import train_all_dataloader
-from torch.utils.tensorboard import SummaryWriter
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", type=str, default="./dataset/Rain100L/", help='path to input data')
-parser.add_argument("--save_path", type=str, default="./result/Rain100L/", help='path to save result')
+parser.add_argument("--dataset", type=str, default="./dataset/Rain100L_train/", help='path to input data')
 
 parser.add_argument("--seed", type=int, default=10, help='random seed')
-parser.add_argument("--psd_num", type=int, default=50, help='the num of pseudo gt')
-parser.add_argument("--mode", type=str, default="train_all", choices=['train_single', 'train_all', 'train_single_pyramid'],help='training mode')
-
-# train_single parameter
-parser.add_argument("--single_epoch", type=int, default=1, help='training epoch')
-parser.add_argument("--f1", type=int, default=1, help='training epoch')
-parser.add_argument("--f2", type=int, default=1, help='training epoch')
 
 # train_all parameter
-parser.add_argument("--epoch", type=int, default=2000, help='training epoch')
+parser.add_argument("--epoch", type=int, default=500, help='training epoch')
 parser.add_argument("--batch_size", type=int, default=64, help='training batch size')
-parser.add_argument('--gamma', type=float, default=0.5)
-parser.add_argument('--lr_steps', type=list, default=[(x+1) * 100 for x in range(1000//100)])
-parser.add_argument('--model_save_dir', type=str, default="./result_all/Rain100L/")
+parser.add_argument("--lr_rate", type=float, default=0.001, help='training batch size')
+parser.add_argument('--model_save_dir', type=str, default="./result_all/weight/")
+parser.add_argument('--result_name', type=str, default="test")
+parser.add_argument("--pretrain",action="store_true",help="enable pretraining mode")
+
 
 opt = parser.parse_args()
 
-loss_function = MSELoss()
+os.makedirs(opt.model_save_dir, exist_ok=True)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def train_all(opt):
-   writer = SummaryWriter()
-   random.seed(opt.seed)
-   data_loader = train_all_dataloader(opt.data_path, batch_size=opt.batch_size)
-   model = UNet().to(device)
-   optimizer = Adam(model.parameters(), lr=0.001)
-   scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, opt.lr_steps, opt.gamma)
+random.seed(opt.seed)
+np.random.seed(opt.seed)
+torch.manual_seed(opt.seed)
+torch.cuda.manual_seed_all(opt.seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
-   for epoch in tqdm(range(opt.epoch)):
-      for itx, batch in enumerate(data_loader):
-         rainy_images, clean_images, ldgp_mask, sdr_images, name = batch
-         rainy_images = rainy_images.to(device)
-         clean_images = clean_images.to(device)
-         ldgp_mask    = ldgp_mask.to(device)
-         sdr_images   = sdr_images.to(device)
-         _, _, H, W = rainy_images.shape
-         
-         more_rainy_images = rainy_images
+data_loader = train_all_dataloader(opt.dataset, batch_size=opt.batch_size)
+model = UNet().to(device)
 
-         net_output = model(more_rainy_images)
-         loss = loss_function(net_output, sdr_images)
-         optimizer.zero_grad()
-         loss.backward()
-         optimizer.step()
+if opt.pretrain:
+   pretrained_weight_path = "result_all/Rain100L/only_pseudo.pkl"
+   print(f"[warning]: now use the pretrained weight. from {pretrained_weight_path}")
+   model_state_dict = torch.load(pretrained_weight_path)
+   model.load_state_dict(model_state_dict['model'])
+
+optimizer = Adam(model.parameters(), lr=opt.lr_rate)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=opt.epoch)
+
+for epoch in tqdm(range(opt.epoch)):
+   model.train()
+   epoch_loss = 0.0
+   for itx, batch in enumerate(data_loader):
+      rainy_images, clean_images, name = batch
+      rainy_images = rainy_images.to(device)
+      clean_images = clean_images.to(device)
+      _, _, H, W = rainy_images.shape
+      
+      net_output = model(rainy_images)
+      loss = torch.abs(net_output - clean_images).mean()
+
+      optimizer.zero_grad()
+      loss.backward()
+      optimizer.step()
+      epoch_loss += loss.item()
    
-      if epoch%10==0:
-         print("Epoch: ", epoch, "Epoch Loss: ", loss.item())
+   scheduler.step()
    
-   model_name = os.path.join(opt.model_save_dir, 'model.pkl')
-   torch.save({'model': model.state_dict(),
-               'optimizer': optimizer.state_dict(),
-               'scheduler': scheduler.state_dict()}, model_name)
+   epoch_loss /= len(data_loader)
+   print("Epoch: ", epoch, "Epoch Loss: ", epoch_loss)
 
-train_all(opt)
+   if (epoch + 1) % 50 == 0:
+      print("save weight")
+      model_name = os.path.join(opt.model_save_dir, (opt.result_name + str(epoch+1) + '.pkl'))
+      torch.save({'model': model.state_dict()}, model_name)

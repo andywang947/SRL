@@ -1,0 +1,13 @@
+  0%|          | 0/1000 [00:00<?, ?it/s]  0%|          | 1/1000 [00:03<1:00:50,  3.65s/it]  0%|          | 2/1000 [00:06<55:19,  3.33s/it]    0%|          | 3/1000 [00:09<53:36,  3.23s/it]  0%|          | 4/1000 [00:12<52:57,  3.19s/it]  0%|          | 4/1000 [00:15<1:02:16,  3.75s/it]
+Epoch:  0 Epoch Loss:  0.41379325091838837
+Epoch:  1 Epoch Loss:  0.16524246707558632
+Epoch:  2 Epoch Loss:  0.1099377628415823
+Epoch:  3 Epoch Loss:  0.0919803399592638
+Traceback (most recent call last):
+  File "/home/andy/SRL/train_all.py", line 75, in <module>
+    train_all(opt)
+  File "/home/andy/SRL/train_all.py", line 49, in train_all
+    for itx, batch in enumerate(data_loader):
+  File "/home/andy/miniconda3/envs/pytorch181/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 701, in __next__
+    data = self._next_data()
+KeyboardInterrupt

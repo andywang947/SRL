@@ -44,8 +44,8 @@ def evaluate_dataset(dataset, threshold=10):
     # pred_dir   = f"./dataset/{dataset}/nonrain_sobel"
     # pred_dir   = f"./dataset/{dataset}/nonrain_intersection"
     # pred_dir   = f"./dataset/{dataset}/rain_intersection_test"
-    # pred_dir   = f"./dataset/{dataset}/ldgp"
-    pred_dir   = f"./dataset/{dataset}/rain_mask_model_pred"
+    pred_dir   = f"./dataset/{dataset}/ldgp"
+    # pred_dir   = f"./dataset/{dataset}/rain_mask_model_pred"
     # pred_dir   = f"./dataset/{dataset}/ldgp_20251216"
     target_dir = f"./dataset/{dataset}/rainmask_gt"
     # target_dir = f"./dataset/{dataset}/non_rain_mask"
@@ -80,6 +80,7 @@ def evaluate_dataset(dataset, threshold=10):
             continue
 
         scores = evaluate_mask(pred_path, target_path, threshold)
+        print(pred_path, scores)
 
         # 累加
         for k in total.keys():
