@@ -1,8 +1,8 @@
 #!/bin/bash
 trap "echo 'Killing all child processes'; pkill -P $$; exit" SIGINT SIGTERM
 
-source /home/andy/miniconda3/etc/profile.d/conda.sh
-conda activate torch_py312
+# source /home/andy/miniconda3/etc/profile.d/conda.sh
+# conda activate SIRI
 # 指定 GPU 編號
 export CUDA_VISIBLE_DEVICES=0
 # 3 4 0 1 5 2
@@ -10,16 +10,7 @@ export CUDA_VISIBLE_DEVICES=0
 python check_gpu.py
 
 # 要跑的資料集列表
-datasets=("Rain12" "Rain100L" "Rain800" "DDN_SIRR_real" "DDN_SIRR_syn" "Rain100L_train")
-# datasets=("Rain12")
-# datasets=("RealRain_1k_H_train")
-# datasets=("RealRain_1k_H")
-# datasets=("RainDS_real_RS_train")
-# datasets=("DDN_SIRR_syn")
-# datasets=("DDN_SIRR_syn")
-# datasets=("GT_Rain")
-# datasets=("Rain100L")
-# datasets=("HQ_RAIN")
+datasets=("Rain12" "Rain100L" "Rain800" "DDN_SIRR_real" "DDN_SIRR_syn" "GT_Rain")
 
 # # 問使用者是否開始訓練
 # read -p "Start training? (y/n): " confirm
@@ -45,7 +36,7 @@ do
         echo "  -> Run $i"
         python sdrl.py \
             --dataset "$dataset" \
-            --result_name "20260413_standard_L_RVC_with_rain_mask_and_both_crop" &
+            --result_name "SIRI" &
 
         # sleep 1
     done

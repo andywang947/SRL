@@ -93,7 +93,7 @@ for batch in data_loader:
             return sum(p.numel() for p in model.parameters())
 
         params = count_params(addrain_model)
-        print(f"Params: {params/1e6:.3f} M")
+        # print(f"Params: {params/1e6:.3f} M")
 
         initial_model = UNet()
         initial_model = initial_model.to(device)
