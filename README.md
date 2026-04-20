@@ -5,8 +5,6 @@
 conda create -n SIRI python=3.12 -y
 conda activate SIRI
 
-# conda install pytorch=1.8 torchvision cudatoolkit=10.2 -c pytorch
-
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 pip install matplotlib scikit-learn scikit-image opencv-python tqdm
 pip install numpy pyyaml requests scipy
